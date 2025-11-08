@@ -13,25 +13,14 @@ def find_nanovna_auto():
                 response = ser.read(100).decode('ascii', errors='ignore')
                 
                 if 'nanovna' in response.lower() or 'ch>' in response:
-                    print(f"Найден по ответу: {port.device}")
                     return port.device
-                    
         except:
             continue
-    print("NanoVNA не найден!")
     return None
 
-def get_nanovna_port():
+if __name__ == "__main__":
     port = find_nanovna_auto()
     if port:
         print(f"Используется порт: {port}")
-    else:
-        print("NanoVNA не найден!")
-    return port
-
-if __name__ == "__main__":
-    port = get_nanovna_port()
-    if port:
-        print(f"Подключение к {port}")
     else:
         print("Проверьте подключение NanoVNA")
