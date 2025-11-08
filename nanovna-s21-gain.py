@@ -4,7 +4,6 @@ import numpy as np
 import time
 
 def send_command(ser, command, wait_time=0.5):
-    """Отправка команды и получение ответа"""
     print(f"Отправка команды: {command}")
     ser.write((command + '\r\n').encode())
     time.sleep(wait_time)
@@ -19,11 +18,9 @@ def send_command(ser, command, wait_time=0.5):
     return response.decode('ascii', errors='ignore')
 
 def setup_nanovna(ser, cal_slot=0):
-    """Настройка диапазона сканирования и загрузка калибровки"""
     print("Настройка NanoVNA...")
-    
     commands = [
-        f"cal load {cal_slot}",      # Загрузка калибровки из указанного слота
+        f"cal load {cal_slot}",
         "sweep 30000000 1500000000 101",
         "pause",
     ]
@@ -43,7 +40,6 @@ def setup_nanovna(ser, cal_slot=0):
     time.sleep(1)
 
 def get_nanovna_data(ser):
-    """Получение данных S21 от NanoVNA"""
     print("Получение данных S21...")
     
     # Запускаем одно сканирование
@@ -61,7 +57,6 @@ def get_nanovna_data(ser):
     return freq_data, s21_data
 
 def parse_frequency_data(data):
-    """Парсинг данных частот"""
     frequencies = []
     lines = data.strip().split('\n')
     
@@ -80,7 +75,6 @@ def parse_frequency_data(data):
     return frequencies
 
 def parse_s21_data(data):
-    """Парсинг данных S21 (комплексные числа)"""
     s21_points = []
     lines = data.strip().split('\n')
     
@@ -100,7 +94,6 @@ def parse_s21_data(data):
     return s21_points
 
 def calculate_s21_db(s21_points):
-    """Вычисление S21 в дБ"""
     s21_db = []
     for real, imag in s21_points:
         magnitude = np.sqrt(real**2 + imag**2)
@@ -112,7 +105,6 @@ def calculate_s21_db(s21_points):
     return s21_db
 
 def plot_filter_response(frequencies, s21_db):
-    """Построение графика АЧХ фильтра"""
     if not frequencies or not s21_db:
         print("Недостаточно данных для построения графика")
         return
@@ -172,10 +164,8 @@ def plot_filter_response(frequencies, s21_db):
         print(f"Среднее подавление в FM диапазоне: {avg_fm_attenuation:.1f} дБ")
 
 def main():
-    """Основная функция"""
     ser = None
     try:
-        # Подключение к NanoVNA
         print("=" * 50)
         print("Подключение к NanoVNA-H4 на COM3...")
         print("=" * 50)
@@ -193,10 +183,8 @@ def main():
         # Настройка с загрузкой калибровки из слота 0
         setup_nanovna(ser, cal_slot=0)
         
-        # Получение данных
         freq_data, s21_data = get_nanovna_data(ser)
         
-        # Парсинг данных
         frequencies = parse_frequency_data(freq_data)
         s21_points = parse_s21_data(s21_data)
         s21_db = calculate_s21_db(s21_points)
@@ -204,7 +192,6 @@ def main():
         print(f"\nОбработано {len(frequencies)} частот и {len(s21_points)} точек S21")
         
         if frequencies and s21_db:
-            # Построение графика
             plot_filter_response(frequencies, s21_db)
         else:
             print("Не удалось получить данные для построения графика")
