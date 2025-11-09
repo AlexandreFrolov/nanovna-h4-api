@@ -206,6 +206,7 @@ def measure_cable_with_different_vf(ser, known_length=None):
         # Стандартные коэффициенты укорочения для разных кабелей
         cable_types = {
             "RG-58": 0.66,
+            "RG-174": 0.66,
             "RG-213": 0.66,
             "LMR-400": 0.85,
             "Коаксиал с полиэтиленом": 0.66,
@@ -232,20 +233,9 @@ def measure_cable_with_different_vf(ser, known_length=None):
         print("Не удалось определить длину кабеля")
 
 def main():
-    """Основная функция"""
     ser = None
     try:
-        print("=" * 60)
         print("ИЗМЕРЕНИЕ ДЛИНЫ КАБЕЛЯ С ПОМОЩЬЮ NANOVNA")
-        print("=" * 60)
-        print("\nПОДКЛЮЧЕНИЕ:")
-        print("1. Подключите кабель к PORT1 NanoVNA")
-        print("2. На другой конец кабеля подключите нагрузку 50 Ом")
-        print("3. Или оставьте конец кабеля разомкнутым")
-        print("4. Убедитесь, что калибровка выполнена\n")
-        
-        input("Нажмите Enter для начала измерения...")
-        
         ser = serial.Serial(
             port='COM3',
             baudrate=115200,
