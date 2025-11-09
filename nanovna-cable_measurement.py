@@ -141,17 +141,14 @@ def find_cable_length(frequencies, phases, vswr_values, vf=0.66):
     
     return cable_length, electrical_length, delta_f, freq1, freq2
 
-def calculate_velocity_factor(frequencies, phases, known_length):
-    """Вычисление коэффициента укорочения по известной длине кабеля"""
-    phase_slope = np.polyfit(frequencies, phases, 1)[0]
-    c = 3e8
-    vf = -phase_slope * c / (4 * np.pi * known_length)
-    return vf
-
 def plot_cable_measurement(frequencies, phases, vswr_values, cable_length, delta_f):
-    """Построение графиков измерения кабеля"""
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 10))
     
+    print(f"\n=== РЕЗУЛЬТАТЫ ИЗМЕРЕНИЯ КАБЕЛЯ ===")
+    print(f"Разность частот между резонансами: {delta_f/1e6:.2f} МГц")
+    print(f"Расчетная длина кабеля: {cable_length:.2f} метров")
+    print(f"Длина кабеля в сантиметрах: {cable_length * 100:.1f} см")
+
     # График 1: КСВ
     frequencies_mhz = [f / 1e6 for f in frequencies]
     ax1.plot(frequencies_mhz, vswr_values, 'b-', linewidth=2, label='КСВ')
@@ -173,16 +170,7 @@ def plot_cable_measurement(frequencies, phases, vswr_values, cable_length, delta
     plt.tight_layout()
     plt.show()
     
-    # Вывод результатов
-    print(f"\n=== РЕЗУЛЬТАТЫ ИЗМЕРЕНИЯ КАБЕЛЯ ===")
-    print(f"Разность частот между резонансами: {delta_f/1e6:.2f} МГц")
-    print(f"Расчетная длина кабеля: {cable_length:.2f} метров")
-    print(f"Длина кабеля в сантиметрах: {cable_length * 100:.1f} см")
-    print(f"Длина кабеля в футах: {cable_length * 3.281:.1f} ft")
-
-def measure_cable_with_different_vf(ser, known_length=None):
-    """Измерение кабеля с возможностью определения коэффициента укорочения"""
-    # Настройка для широкого диапазона
+def measure_cable_with_different_vf(ser):
     setup_nanovna_for_cable_measurement(ser, start_freq=1e6, stop_freq=500e6, points=501)
     
     # Получение данных
@@ -198,30 +186,26 @@ def measure_cable_with_different_vf(ser, known_length=None):
     phases = calculate_phase(s11_points)
     vswr_values = calculate_vswr(s11_points)
     
-    # Если известна длина, вычисляем коэффициент укорочения
-    if known_length:
-        vf = calculate_velocity_factor(frequencies, phases, known_length)
-        print(f"\nРасчетный коэффициент укорочения: {vf:.3f}")
-    else:
-        # Стандартные коэффициенты укорочения для разных кабелей
-        cable_types = {
-            "RG-58": 0.66,
-            "RG-174": 0.66,
-            "RG-213": 0.66,
-            "LMR-400": 0.85,
-            "Коаксиал с полиэтиленом": 0.66,
-            "Коаксиал с тефлоном": 0.70,
-            "Воздушный коаксиал": 0.80
-        }
+    # Стандартные коэффициенты укорочения для разных кабелей
+    cable_types = {
+        "RG-58": 0.66,
+        "RG-174": 0.66,
+        "RG-213": 0.66,
+        "LMR-400": 0.85,
+        "Коаксиал с полиэтиленом": 0.66,
+        "Коаксиал с тефлоном": 0.70,
+        "Воздушный коаксиал": 0.80
+    }
         
-        print("\n=== РЕЗУЛЬТАТЫ ДЛЯ РАЗНЫХ ТИПОВ КАБЕЛЕЙ ===")
-        for cable_type, vf in cable_types.items():
-            length, _, delta_f, freq1, freq2 = find_cable_length(frequencies, phases, vswr_values, vf)
-            if length:
-                print(f"{cable_type} (VF={vf}): {length:.2f} м")
+    print("\n=== РЕЗУЛЬТАТЫ ДЛЯ РАЗНЫХ ТИПОВ КАБЕЛЕЙ ===")
+    for cable_type, vf in cable_types.items():
+        length, _, delta_f, freq1, freq2 = find_cable_length(frequencies, phases, vswr_values, vf)
+        if length:
+            print(f"{cable_type} (VF={vf}): {length:.2f} м")
         
-        # Используем средний коэффициент для построения графика
-        vf = 0.66
+
+    # Используем средний коэффициент для построения графика
+    vf = 0.66
     
     # Расчет длины с выбранным коэффициентом
     cable_length, electrical_length, delta_f, freq1, freq2 = find_cable_length(
@@ -235,28 +219,15 @@ def measure_cable_with_different_vf(ser, known_length=None):
 def main():
     ser = None
     try:
-        print("ИЗМЕРЕНИЕ ДЛИНЫ КАБЕЛЯ С ПОМОЩЬЮ NANOVNA")
+        print("Измерение длины кабеля с помощью NanoVNA")
         ser = serial.Serial(
             port='COM3',
             baudrate=115200,
             timeout=2,
             write_timeout=2,
         )
-        
         time.sleep(2)
-        
-        # Спросим, известна ли длина кабеля
-        known_length_input = input("Известна ли длина кабеля? (y/n): ").lower()
-        known_length = None
-        
-        if known_length_input == 'y':
-            try:
-                known_length = float(input("Введите длину кабеля в метрах: "))
-            except ValueError:
-                print("Некорректный ввод, продолжаем без известной длины")
-        
-        # Выполняем измерение
-        measure_cable_with_different_vf(ser, known_length)
+        measure_cable_with_different_vf(ser)
         
     except Exception as e:
         print(f"Ошибка: {e}")
@@ -266,7 +237,6 @@ def main():
     finally:
         if ser and ser.is_open:
             ser.close()
-            print("\nСоединение закрыто")
 
 if __name__ == "__main__":
     main()
