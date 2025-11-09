@@ -6,7 +6,6 @@ from scipy.signal import find_peaks
 import math
 
 def send_command(ser, command, wait_time=0.5):
-    """Отправка команды и получение ответа"""
     print(f"Отправка команды: {command}")
     ser.write((command + '\r\n').encode())
     time.sleep(wait_time)
@@ -21,7 +20,6 @@ def send_command(ser, command, wait_time=0.5):
     return response.decode('ascii', errors='ignore')
 
 def setup_nanovna_for_cable_measurement(ser, start_freq=1e6, stop_freq=300e6, points=201):
-    """Настройка NanoVNA для измерения кабеля"""
     print("Настройка NanoVNA для измерения кабеля...")
     
     commands = [
@@ -37,12 +35,9 @@ def setup_nanovna_for_cable_measurement(ser, start_freq=1e6, stop_freq=300e6, po
     time.sleep(1)
 
 def get_s11_data(ser):
-    """Получение данных S11 (коэффициент отражения)"""
     print("Получение данных S11...")
     
-    # Запускаем сканирование
-    send_command(ser, "resume", 0.5)
-    time.sleep(2)
+    send_command(ser, "resume", 2)
     
     # Получаем данные частот
     freq_data = send_command(ser, "frequencies", 1)
@@ -53,7 +48,6 @@ def get_s11_data(ser):
     return freq_data, s11_data
 
 def parse_frequency_data(data):
-    """Парсинг данных частот"""
     frequencies = []
     lines = data.strip().split('\n')
     
@@ -71,7 +65,6 @@ def parse_frequency_data(data):
     return frequencies
 
 def parse_s11_data(data):
-    """Парсинг данных S11 (комплексные числа)"""
     s11_points = []
     lines = data.strip().split('\n')
     
@@ -90,7 +83,6 @@ def parse_s11_data(data):
     return s11_points
 
 def calculate_phase(s11_points):
-    """Вычисление фазы S11 в радианах"""
     phases = []
     for real, imag in s11_points:
         phase = np.arctan2(imag, real)  # Фаза в радианах
@@ -98,7 +90,6 @@ def calculate_phase(s11_points):
     return phases
 
 def calculate_vswr(s11_points):
-    """Вычисление КСВ из S11"""
     vswr_values = []
     for real, imag in s11_points:
         magnitude = np.sqrt(real**2 + imag**2)
@@ -173,7 +164,6 @@ def plot_cable_measurement(frequencies, phases, vswr_values, cable_length, delta
 def measure_cable_with_different_vf(ser):
     setup_nanovna_for_cable_measurement(ser, start_freq=1e6, stop_freq=500e6, points=501)
     
-    # Получение данных
     freq_data, s11_data = get_s11_data(ser)
     frequencies = parse_frequency_data(freq_data)
     s11_points = parse_s11_data(s11_data)
@@ -182,7 +172,6 @@ def measure_cable_with_different_vf(ser):
         print("Не удалось получить данные")
         return
     
-    # Расчет параметров
     phases = calculate_phase(s11_points)
     vswr_values = calculate_vswr(s11_points)
     
