@@ -208,7 +208,6 @@ def measure_cable_with_different_vf(ser):
 def main():
     ser = None
     try:
-        print("Измерение длины кабеля с помощью NanoVNA")
         ser = serial.Serial(
             port='COM3',
             baudrate=115200,
