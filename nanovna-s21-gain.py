@@ -4,6 +4,7 @@ import numpy as np
 import time
 
 def send_command(ser, command, wait_time=0.5):
+    """Отправка команды и получение ответа"""
     print(f"Отправка команды: {command}")
     ser.write((command + '\r\n').encode())
     time.sleep(wait_time)
@@ -18,9 +19,11 @@ def send_command(ser, command, wait_time=0.5):
     return response.decode('ascii', errors='ignore')
 
 def setup_nanovna(ser, cal_slot=0):
+    """Настройка диапазона сканирования и загрузка калибровки"""
     print("Настройка NanoVNA...")
+    
     commands = [
-        f"cal load {cal_slot}",
+        f"cal load {cal_slot}",      # Загрузка калибровки из указанного слота
         "sweep 30000000 1500000000 101",
         "pause",
     ]
@@ -41,22 +44,15 @@ def setup_nanovna(ser, cal_slot=0):
 
 def get_nanovna_data(ser):
     print("Получение данных S21...")
-    
-    # Запускаем одно сканирование
-    send_command(ser, "resume", 0.5)
-    time.sleep(2)  # Ждем завершения сканирования
-    
-    # Получаем данные частот
+    send_command(ser, "resume", 2)
     freq_data = send_command(ser, "frequencies", 1)
     print(f"Получено данных частот: {len(freq_data)} байт")
-    
-    # Получаем данные S21
     s21_data = send_command(ser, "data 1", 1)  # S21 - transmission
     print(f"Получено данных S21: {len(s21_data)} байт")
-    
     return freq_data, s21_data
 
 def parse_frequency_data(data):
+    """Парсинг данных частот"""
     frequencies = []
     lines = data.strip().split('\n')
     
@@ -75,6 +71,7 @@ def parse_frequency_data(data):
     return frequencies
 
 def parse_s21_data(data):
+    """Парсинг данных S21 (комплексные числа)"""
     s21_points = []
     lines = data.strip().split('\n')
     
@@ -94,6 +91,7 @@ def parse_s21_data(data):
     return s21_points
 
 def calculate_s21_db(s21_points):
+    """Вычисление S21 в дБ"""
     s21_db = []
     for real, imag in s21_points:
         magnitude = np.sqrt(real**2 + imag**2)
@@ -105,6 +103,7 @@ def calculate_s21_db(s21_points):
     return s21_db
 
 def plot_filter_response(frequencies, s21_db):
+    """Построение графика АЧХ фильтра"""
     if not frequencies or not s21_db:
         print("Недостаточно данных для построения графика")
         return
@@ -176,13 +175,9 @@ def main():
             timeout=2,
             write_timeout=2,
         )
-        
-        # Ждем инициализации
         time.sleep(2)
         
-        # Настройка с загрузкой калибровки из слота 0
         setup_nanovna(ser, cal_slot=0)
-        
         freq_data, s21_data = get_nanovna_data(ser)
         
         frequencies = parse_frequency_data(freq_data)
