@@ -11,25 +11,21 @@ def send_command(ser, command, wait_time=0.5):
     print(f"Отправка команды: {command}")
     ser.write((command + '\r\n').encode())
     time.sleep(wait_time)
-    
     response = b''
     start_time = time.time()
     while time.time() - start_time < wait_time:
         if ser.in_waiting > 0:
             response += ser.read(ser.in_waiting)
         time.sleep(0.01)
-    
     return response.decode('ascii', errors='ignore')
 
 def setup_nanovna(ser, cal_slot=0):
     print("Настройка NanoVNA...")
-    
     commands = [
         f"cal load {cal_slot}",
         "sweep 30000000 250000000 101",
         "pause",
     ]
-    
     for cmd in commands:
         response = send_command(ser, cmd, 0.5)
         if response:
@@ -40,11 +36,9 @@ def setup_nanovna(ser, cal_slot=0):
     cal_status = send_command(ser, "cal", 0.5)
     if cal_status:
         print(f"Статус калибровки: {cal_status}")
-    
     time.sleep(1)
 
 def get_nanovna_data(ser):
-    print("Получение данных S21...")
     send_command(ser, "resume", 2)
     freq_data = send_command(ser, "frequencies", 1)
     print(f"Получено данных частот: {len(freq_data)} байт")
@@ -55,7 +49,6 @@ def get_nanovna_data(ser):
 def parse_frequency_data(data):
     frequencies = []
     lines = data.strip().split('\n')
-    
     for line in lines:
         line = line.strip()
         if line and not line.startswith('ch>'):
@@ -66,14 +59,11 @@ def parse_frequency_data(data):
                     frequencies.append(freq)
             except ValueError:
                 continue
-    
     return frequencies
 
 def parse_s21_data(data):
-    """Парсинг данных S21 (комплексные числа)"""
     s21_points = []
     lines = data.strip().split('\n')
-    
     for line in lines:
         line = line.strip()
         if line and not line.startswith('ch>'):
@@ -86,7 +76,6 @@ def parse_s21_data(data):
                     s21_points.append((real, imag))
             except ValueError:
                 continue
-    
     return s21_points
 
 def calculate_s21_db(s21_points):
