@@ -33,7 +33,7 @@ def simple_calibrate():
         print(ser.read(100).decode())
 
     ser.close()
-    print("✅ Готово!")
+    print("Готово!")
 
 if __name__ == "__main__":
     simple_calibrate()
