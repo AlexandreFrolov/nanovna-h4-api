@@ -112,7 +112,7 @@ def save_filter_response(frequencies, s21_db, filename=None):
     frequencies_mhz = [f / 1e6 for f in frequencies]
     
     # Создаем папку для результатов если её нет
-    results_dir = "/home/pi/nanovna_results"
+    results_dir = "/home/frolov"
     if not os.path.exists(results_dir):
         os.makedirs(results_dir)
     
@@ -192,53 +192,14 @@ def save_filter_response(frequencies, s21_db, filename=None):
     
     return filepath
 
-def find_nanovna_port():
-    """Автоматический поиск порта NanoVNA"""
-    possible_ports = ['/dev/ttyUSB0', '/dev/ttyUSB1', '/dev/ttyACM0', '/dev/ttyACM1']
-    
-    for port in possible_ports:
-        if os.path.exists(port):
-            try:
-                print(f"Проверка порта {port}...")
-                ser = serial.Serial(port, 115200, timeout=1)
-                time.sleep(2)
-                # Отправляем тестовую команду
-                response = send_command(ser, "info", 0.5)
-                if response and "NanoVNA" in response:
-                    print(f"Найден NanoVNA на порту {port}")
-                    return ser
-                else:
-                    ser.close()
-            except Exception as e:
-                print(f"Ошибка при проверке порта {port}: {e}")
-                continue
-    
-    return None
-
 def main():
     ser = None
     try:
-        print("Поиск NanoVNA-H4...")
-        
-        # Автоматический поиск порта
-        ser = find_nanovna_port()
-        
-        if ser is None:
-            # Ручной ввод порта
-            port = input("Введите порт вручную (например /dev/ttyUSB0): ")
-            ser = serial.Serial(
-                port=port,
-                baudrate=115200,
-                timeout=2,
-                write_timeout=2,
-            )
-            time.sleep(2)
-        
+        ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
         print("Подключение установлено")
         
         setup_nanovna(ser, cal_slot=0)
         freq_data, s21_data = get_nanovna_data(ser)
-        
         frequencies = parse_frequency_data(freq_data)
         s21_points = parse_s21_data(s21_data)
         s21_db = calculate_s21_db(s21_points)
@@ -250,16 +211,13 @@ def main():
             print(f"\nИзмерение завершено. Результаты сохранены в: {plot_filename}")
         else:
             print("Не удалось получить данные для построения графика")
-            
     except Exception as e:
         print(f"Ошибка: {e}")
         import traceback
         traceback.print_exc()
-        
     finally:
         if ser and ser.is_open:
             ser.close()
-            print("\nСоединение закрыто")
 
 if __name__ == "__main__":
     main()
