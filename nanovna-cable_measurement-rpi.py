@@ -4,7 +4,6 @@ import os
 import subprocess
 import math
 
-# Для работы на Raspberry Pi
 try:
     import RPi.GPIO as GPIO
     RASPBERRY_PI = True
@@ -15,33 +14,9 @@ except ImportError:
 class CableAnalyzer:
     def __init__(self):
         self.ser = None
-        
-    def detect_serial_port(self):
-        """Автоматическое определение последовательного порта"""
-        possible_ports = [
-            '/dev/ttyACM0',
-            '/dev/ttyUSB0', 
-            '/dev/ttyUSB1',
-            '/dev/ttyAMA0',
-            '/dev/serial0',
-        ]
-        
-        for port in possible_ports:
-            if os.path.exists(port):
-                try:
-                    test_ser = serial.Serial(port, 115200, timeout=1)
-                    test_ser.close()
-                    print(f"Найден порт: {port}")
-                    return port
-                except (serial.SerialException, OSError):
-                    continue
-        
-        return '/dev/ttyACM0'
 
     def send_command(self, command, wait_time=0.5):
-        """Отправка команды NanoVNA"""
         print(f"Отправка команды: {command}")
-        
         try:
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
@@ -63,19 +38,15 @@ class CableAnalyzer:
             return ""
 
     def setup_nanovna(self, start_freq=1e6, stop_freq=300e6, points=201):
-        """Настройка NanoVNA"""
         print("Настройка NanoVNA для измерения кабеля...")
-        
         test_response = self.send_command("info", 1)
         if not test_response or "ch>" not in test_response:
             print("Ошибка: NanoVNA не отвечает")
             return False
-        
         commands = [
             f"sweep {int(start_freq)} {int(stop_freq)} {points}",
             "pause",
         ]
-        
         for cmd in commands:
             response = self.send_command(cmd, 0.5)
             if response:
@@ -85,23 +56,17 @@ class CableAnalyzer:
         return True
 
     def get_s11_data(self):
-        """Получение данных S11"""
         print("Получение данных S11...")
-        
         self.send_command("resume", 2)
         freq_data = self.send_command("frequencies", 1)
         s11_data = self.send_command("data 0", 1)
-        
         return freq_data, s11_data
 
     def parse_frequency_data(self, data):
-        """Парсинг данных частоты"""
         frequencies = []
         if not data:
             return frequencies
-            
         lines = data.strip().split('\n')
-        
         for line in lines:
             line = line.strip()
             if line and not line.startswith('ch>'):
@@ -112,17 +77,13 @@ class CableAnalyzer:
                         frequencies.append(freq)
                 except ValueError:
                     continue
-        
         return frequencies
 
     def parse_s11_data(self, data):
-        """Парсинг данных S11"""
         s11_points = []
         if not data:
             return s11_points
-            
         lines = data.strip().split('\n')
-        
         for line in lines:
             line = line.strip()
             if line and not line.startswith('ch>'):
@@ -134,11 +95,9 @@ class CableAnalyzer:
                         s11_points.append((real, imag))
                 except ValueError:
                     continue
-        
         return s11_points
 
     def calculate_vswr(self, s11_points):
-        """Расчет КСВ"""
         vswr_values = []
         for real, imag in s11_points:
             magnitude = math.sqrt(real**2 + imag**2)
@@ -150,7 +109,6 @@ class CableAnalyzer:
         return vswr_values
 
     def calculate_phase(self, s11_points):
-        """Расчет фазы"""
         phases = []
         for real, imag in s11_points:
             phase = math.atan2(imag, real)
@@ -158,7 +116,6 @@ class CableAnalyzer:
         return phases
 
     def find_peaks_simple(self, data, min_distance=5):
-        """Простой алгоритм поиска пиков"""
         peaks = []
         for i in range(min_distance, len(data) - min_distance):
             if (data[i] == max(data[i-min_distance:i+min_distance+1])):
@@ -166,7 +123,6 @@ class CableAnalyzer:
         return peaks
 
     def find_cable_length(self, frequencies, phases, vswr_values, vf=0.66):
-        """Определение длины кабеля"""
         if len(frequencies) < 10:
             print("Недостаточно данных для анализа")
             return None, None, None, None, None
@@ -215,7 +171,6 @@ class CableAnalyzer:
             return None, None, None, None, None
 
     def measure_cable(self):
-        """Основная функция измерения"""
         if not self.setup_nanovna(start_freq=1e6, stop_freq=500e6, points=101):
             return
         
@@ -234,7 +189,6 @@ class CableAnalyzer:
         phases = self.calculate_phase(s11_points)
         vswr_values = self.calculate_vswr(s11_points)
         
-        # Коэффициенты укорочения для разных кабелей
         cable_types = {
             "RG-58": 0.66,
             "RG-174": 0.66,
@@ -268,13 +222,10 @@ class CableAnalyzer:
             print("Не удалось определить длину кабеля")
 
     def print_detailed_results(self, cable_length, delta_f, frequencies, vswr_values):
-        """Вывод подробных результатов"""
         print(f"\nОСНОВНЫЕ РЕЗУЛЬТАТЫ:")
         print(f"Разность частот между резонансами: {delta_f/1e6:.2f} МГц")
         print(f"Расчетная длина кабеля: {cable_length:.3f} метров")
         print(f"В сантиметрах: {cable_length * 100:.1f} см")
-        print(f"В дюймах: {cable_length * 39.37:.1f} inch")
-        print(f"В футах: {cable_length * 3.281:.1f} ft")
         
         print(f"\nДИАПАЗОН ИЗМЕРЕНИЙ:")
         print(f"Начальная частота: {frequencies[0]/1e6:.1f} МГц")
@@ -297,7 +248,6 @@ class CableAnalyzer:
             print("Оценка: Проверьте соединения и кабель")
 
     def save_results(self, frequencies, s11_points, cable_length, results):
-        """Сохранение результатов в файл"""
         try:
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             filename = f"cable_results_{timestamp}.txt"
@@ -323,22 +273,11 @@ class CableAnalyzer:
             print(f"Ошибка сохранения: {e}")
 
     def run(self):
-        """Запуск измерения"""
         try:
-            port = self.detect_serial_port()
-            print(f"Используется порт: {port}")
-            
-            self.ser = serial.Serial(
-                port=port,
-                baudrate=115200,
-                timeout=2,
-                write_timeout=2,
-            )
-            
+            self.ser = serial.Serial('/dev/ttyACM0', 115200, timeout=1)
             time.sleep(2)
             self.ser.reset_input_buffer()
             self.ser.reset_output_buffer()
-            
             print("Подключение к NanoVNA установлено")
             self.measure_cable()
             
